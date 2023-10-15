@@ -25,6 +25,7 @@ include_directories(
   include
   ${rclcpp_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${mocap_base_INCLUDE_DIRS}
 )
 
 # QUALISYS

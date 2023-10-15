@@ -36,18 +36,31 @@ double QualisysDriver::deg2rad = M_PI / 180.0;
 bool QualisysDriver::init() {
   // The base port (as entered in QTM, TCP/IP port number, in the RT output tab
   // of the workspace options
-  nh.param("server_address", server_address, string(""));
-  nh.param("server_base_port", base_port, 22222);
-  nh.param("model_list", model_list, vector<string>(0));
   int unsigned_frame_rate;
-  nh.param("frame_rate", unsigned_frame_rate, 0);
   frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
-  nh.param("max_accel", max_accel, 10.0);
-  nh.param("publish_tf", publish_tf, false);
-  nh.param("fixed_frame_id", fixed_frame_id, string("mocap"));
   int int_udp_port;
-  nh.param("udp_port", int_udp_port, -1);
-  nh.param("qtm_protocol_version", qtm_protocol_version, 18);
+  nh->declare_parameter("server_address", "");
+  nh->declare_parameter("server_base_port", 22222);
+  nh->declare_parameter("model_list", vector<string>(0));
+  nh->declare_parameter("frame_rate", 0);
+  nh->declare_parameter("max_accel", 10.0);
+  nh->declare_parameter("publish_tf", false);
+  nh->declare_parameter("fixed_frame_id", "mocap");
+  nh->declare_parameter("udp_port", -1);
+  nh->declare_parameter("qtm_protocol_version", 18);
+
+  // nh.param("server_address", server_address, string(""));
+  // nh.param("server_base_port", base_port, 22222);
+  // nh.param("model_list", model_list, vector<string>(0));
+  // int unsigned_frame_rate;
+  // nh.param("frame_rate", unsigned_frame_rate, 0);
+  // frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
+  // nh.param("max_accel", max_accel, 10.0);
+  // nh.param("publish_tf", publish_tf, false);
+  // nh.param("fixed_frame_id", fixed_frame_id, string("mocap"));
+  // int int_udp_port;
+  // nh.param("udp_port", int_udp_port, -1);
+  // nh.param("qtm_protocol_version", qtm_protocol_version, 18);
 
   if (server_address.empty()){
     RCLCPP_FATAL(nh->get_logger(), "server_address parameter empty");
@@ -74,26 +87,23 @@ bool QualisysDriver::init() {
                              udp_port_ptr, 
                              major_protocol_version, 
                              minor_protocol_version)) {
-    RCLCPP_FATAL(nh->get_logger(), "Connection to QTM server at: "
-        << server_address << ":" << base_port << " failed\n"
-        "Reason: " << port_protocol.GetErrorString());
+    RCLCPP_FATAL(nh->get_logger(), "Connection to QTM server at: %s:%d failed", server_address.c_str(), base_port);
     return false;
   }
   RCLCPP_INFO_STREAM(nh->get_logger(), "Connected to " << server_address << ":" << base_port);
   if (udp_stream_port > 0) 
   {
-    RCLCPP_INFO(nh->get_logger(), "Streaming data to UDP port " << udp_stream_port);
+    RCLCPP_INFO(nh->get_logger(), "Streaming data to UDP port %u",udp_stream_port);
   }
   // Get 6DOF settings
   bool bDataAvailable = false;
   port_protocol.Read6DOFSettings(bDataAvailable);
   if (bDataAvailable == false) {
-    RCLCPP_FATAL(nh->get_logger(), "Reading 6DOF body settings failed during intialization\n"
-        << "QTM error: " << port_protocol.GetErrorString());
+    RCLCPP_FATAL(nh->get_logger(), "Reading 6DOF body settings failed during intialization\nQTM error: %s",port_protocol.GetErrorString());
     return false;
   }
   // Read system settings
-  if (!port_protocol.ReadCameraSystemSettings()){
+  if (!port_protocol.ReadGeneralSettings()){
     RCLCPP_FATAL_STREAM(nh->get_logger(), "Failed to read camera system settings during intialization\n"
         << "QTM error: " << port_protocol.GetErrorString());
     return false;
@@ -108,7 +118,7 @@ bool QualisysDriver::init() {
   }
   else {
     if (frame_rate > system_frequency){
-      RCLCPP_WARN("Requested capture rate %i larger than current system capture rate %i.", 
+      RCLCPP_WARN(nh->get_logger(),"Requested capture rate %i larger than current system capture rate %i.", 
                frame_rate, system_frequency);
     }
     frame_rate = system_frequency;
@@ -119,7 +129,7 @@ bool QualisysDriver::init() {
       udp_stream_port, // nUDPPort
       nullptr, // nUDPAddr
       CRTProtocol::cComponent6d);
-  RCLCPP_INFO(nh->get_logger(), "Streaming frames at " << frame_rate << " Hz");
+  RCLCPP_INFO(nh->get_logger(), "Streaming frames at [Hz] %u", frame_rate);
   // Calculate covariance matrices
   process_noise.topLeftCorner<6, 6>() =
     0.5*Matrix<double, 6, 6>::Identity()*dt*dt*max_accel;
@@ -152,8 +162,7 @@ bool QualisysDriver::run() {
       case CRTPacket::PacketError:
 
         RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(),
-            1, "Error when streaming frames: "
-            << port_protocol.GetRTPacket()->GetErrorString());
+            1, "Error when streaming frames : %s", port_protocol.GetRTPacket()->GetErrorString());
         break;
 
       // Case 2 - No more data
@@ -190,7 +199,9 @@ void QualisysDriver::handleFrame() {
   double current_frame_time = prt_packet->GetTimeStamp() / 1e6;
   if(start_time_local_ == 0)
   {
-    start_time_local_ = rclcpp::Time::now().toSec();
+    rclcpp::Clock ros_clock(RCL_ROS_TIME);
+    start_time_local_ = ros_clock.now().seconds();
+    // start_time_local_ = rclcpp::Time::now().toSec();
     start_time_packet_ = current_frame_time;
     previous_frame_time = current_frame_time;
   }
@@ -209,7 +220,7 @@ void QualisysDriver::handleFrame() {
       // Create a new subject if it does not exist
       if (subjects.find(subject_name) == subjects.end()) {
         subjects[subject_name] = Subject::SubjectPtr(
-            new Subject(&nh, subject_name, fixed_frame_id));
+            new Subject(nh, subject_name, fixed_frame_id));
         subjects[subject_name]->setParameters(
             process_noise, measurement_noise, frame_rate);
       }

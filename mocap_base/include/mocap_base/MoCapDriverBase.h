@@ -30,6 +30,10 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <mocap_base/KalmanFilter.h>
 
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+
 namespace mocap{
 /*
  * @brief Subject Defines attributes of a rigid body
