@@ -6,11 +6,16 @@
 
   <maintainer email="sunke.polyu@gmail.com">Ke Sun</maintainer>
   <license>Apache-2.0</license>
-  <author>Ke Sun</author>
+  <author>Ke Sun, Joris Verhagen</author>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament</buildtool_depend>
+
   <depend>geometry_msgs</depend>
-  <depend>roscpp</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
   <depend>eigen_conversions</depend>
 
   <export>

@@ -14,30 +14,32 @@
  * limitations under the License.
  */
 
-#include <ros/ros.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <rclcpp/rclcpp.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+// #include <eigen_conversions/eigen_msg.h>
 #include <mocap_base/MoCapDriverBase.h>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+
+#include <mocap_base/helpers.h>
 
 using namespace std;
 using namespace Eigen;
 
 namespace mocap {
 
-Subject::Subject(ros::NodeHandle* nptr, const string& sub_name,
+Subject::Subject(std::shared_ptr<rclcpp::Node> nptr, const string& sub_name,
     const std::string& p_frame):
   name         (sub_name),
   status       (LOST),
   nh_ptr       (nptr),
   parent_frame (p_frame){
 
-  pub_filter = nh_ptr->advertise<nav_msgs::Odometry>(name+"/odom", 1);
-  pub_raw = nh_ptr->advertise<geometry_msgs::PoseStamped>(name+"/pose", 1);
-  pub_vel = nh_ptr->advertise<geometry_msgs::TwistStamped>(name+"/velocity", 1);
+  pub_filter = nh_ptr->create_publisher<nav_msgs::msg::Odometry>(name+"/odom", 1);
+  pub_raw = nh_ptr->create_publisher<geometry_msgs::msg::PoseStamped>(name+"/pose", 1);
+  pub_vel = nh_ptr->create_publisher<geometry_msgs::msg::TwistStamped>(name+"/velocity", 1);
   return;
 }
 
@@ -59,13 +61,13 @@ const Subject::Status& Subject::getStatus() {
 void Subject::enable() {
   boost::unique_lock<boost::shared_mutex> write_lock(mtx);
   status = INITIALIZING;
-  ROS_INFO("Initializing subject %s", name.c_str());
+  RCLCPP_INFO(nh_ptr->get_logger(), "Initializing subject %s", name.c_str());
 }
 void Subject::disable() {
   boost::unique_lock<boost::shared_mutex> write_lock(mtx);
   kFilter.reset();
   status = LOST;
-  ROS_WARN("Lost track of subject %s", name.c_str());
+  RCLCPP_WARN(nh_ptr->get_logger(), "Lost track of subject %s", name.c_str());
 }
 
 // Get the state of the subject
@@ -100,20 +102,19 @@ void Subject::processNewMeasurement(
     const double& time,
     const Quaterniond& m_attitude,
     const Vector3d& m_position) {
-  //ros::Time tbefore_filter = ros::Time::now();
   
   boost::unique_lock<boost::shared_mutex> write_lock(mtx);
 
   // Publish raw data from mocap system
-  geometry_msgs::PoseStamped pose_raw;
-  pose_raw.header.stamp = ros::Time(time);
+  geometry_msgs::msg::PoseStamped pose_raw;
+  pose_raw.header.stamp = rclcpp::Time(time);
   pose_raw.header.frame_id = parent_frame;
 
-  tf::quaternionEigenToMsg(m_attitude, pose_raw.pose.orientation);
-  tf::pointEigenToMsg(m_position, pose_raw.pose.position);
+  quaternionEigenToMsg(m_attitude, pose_raw.pose.orientation);
+  pointEigenToMsg(m_position, pose_raw.pose.position);
 
   
-  pub_raw.publish(pose_raw);
+  pub_raw->publish(pose_raw);
   if (!kFilter.isReady()) {
     status = INITIALIZING;
     kFilter.prepareInitialCondition(time, m_attitude, m_position);
@@ -129,15 +130,15 @@ void Subject::processNewMeasurement(
   kFilter.prediction(time);
   kFilter.update(m_attitude, m_position);
   // Publish the new state
-  nav_msgs::Odometry odom_filter;
-  odom_filter.header.stamp = ros::Time(time);
+  nav_msgs::msg::Odometry odom_filter;
+  odom_filter.header.stamp = rclcpp::Time(time);
   odom_filter.header.frame_id = parent_frame;
   odom_filter.child_frame_id = name + "/base_link";
-  tf::quaternionEigenToMsg(kFilter.attitude, odom_filter.pose.pose.orientation);
-  tf::pointEigenToMsg(kFilter.position, odom_filter.pose.pose.position);
+  quaternionEigenToMsg(kFilter.attitude, odom_filter.pose.pose.orientation);
+  pointEigenToMsg(kFilter.position, odom_filter.pose.pose.position);
   // Transform twist to child frame
-  tf::vectorEigenToMsg(tf_parent2child.linear() * kFilter.angular_vel, odom_filter.twist.twist.angular);
-  tf::vectorEigenToMsg(tf_parent2child.linear() * kFilter.linear_vel, odom_filter.twist.twist.linear);
+  vectorEigenToMsg(tf_parent2child.linear() * kFilter.angular_vel, odom_filter.twist.twist.angular);
+  vectorEigenToMsg(tf_parent2child.linear() * kFilter.linear_vel, odom_filter.twist.twist.linear);
   // To be compatible with the covariance in ROS, we have to do some shifting
   Map<Matrix<double, 6, 6, RowMajor> > pose_cov(odom_filter.pose.covariance.begin());
   Map<Matrix<double, 6, 6, RowMajor> > vel_cov(odom_filter.twist.covariance.begin());
@@ -154,18 +155,18 @@ void Subject::processNewMeasurement(
   r_vel.block<3, 3>(0, 0) = r_vel.block<3, 3>(3, 3) = tf_parent2child.linear();
   vel_cov = r_vel * vel_cov * r_vel.transpose();
 
-  pub_filter.publish(odom_filter);
+  pub_filter->publish(odom_filter);
   //ROS_INFO("filter time: %f", (ros::Time::now() - tbefore_filter).toSec());
 
   // Publish velocity in parent frame
-  geometry_msgs::TwistStamped vel;
-  vel.header.stamp = ros::Time(time);
+  geometry_msgs::msg::TwistStamped vel;
+  vel.header.stamp = rclcpp::Time(time);
   vel.header.frame_id = parent_frame;
 
-  tf::vectorEigenToMsg(kFilter.angular_vel, vel.twist.angular);
-  tf::vectorEigenToMsg(kFilter.linear_vel, vel.twist.linear);
+  vectorEigenToMsg(kFilter.angular_vel, vel.twist.angular);
+  vectorEigenToMsg(kFilter.linear_vel, vel.twist.linear);
 
-  pub_vel.publish(vel);
+  pub_vel->publish(vel);
 
   return;
 }

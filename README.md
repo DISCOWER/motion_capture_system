@@ -1,18 +1,14 @@
-# ROS Driver for Motion Capture Systems
-![VICON Logo](http://www.awn.com/sites/default/files/styles/inline_medium/public/image/featured/1025139-vicon-delivers-motion-capture-innovations-siggraph-2015.jpg?itok=vsH7Prwo)
-
+# ROS2 Driver for Motion Capture Systems
 ![QUALISYS Logo](https://cdn-content.qualisys.com/2021/01/qualisys-logo-530x.png)
 
 
 ## Overview
-This package contains ROS drivers for two different motion capture systems,**VICON** And **QUALISYS**.
-**NOTE:** This fork focuses on the Qualisys ROS driver. Some alterations have been made to the Vicon package to ensure compatability with the mutual interface.
+This package contains ROS2 drivers for two different motion capture systems,**VICON** And **QUALISYS**.
+**NOTE:** This fork focuses on the Qualisys ROS2 driver. Some alterations have been made to the Vicon package to ensure compatability with the mutual interface.
 
-**Keywords:** ROS, motion capture, Qualisys
+**Keywords:** ROS2, motion capture, Qualisys
 
 ## License
-For the VICON driver, we use the [offical SDK](http://www.vicon.com/products/software/datastream-sdk).
-
 For the QUALISYS driver, we use the [Qualisys CPP SDK](https://github.com/qualisys/qualisys_cpp_sdk).
 
 The rest of the source code is released under the [Apache 2.0 license](LICENSE), wherever not specified.

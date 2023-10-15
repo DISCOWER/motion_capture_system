@@ -1,61 +1,77 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(mocap_base)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+## Compile as C++14, supported in ROS Kinetic and newer
+add_compile_options(-std=c++14)
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -O3 -fPIC")
 
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  geometry_msgs
-  eigen_conversions
-)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES mocap_base_driver mocap_kalman_filter
-  CATKIN_DEPENDS
-    geometry_msgs
-  DEPENDS
-  Boost EIGEN3
-)
-
+###########
+## Build ##
+###########
+# Specify additional locations of header files
+# Your package locations should be listed before other locations
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
-
+# Declare C++ libraries
 add_library(mocap_kalman_filter
   src/KalmanFilter.cpp
 )
+
 target_link_libraries(mocap_kalman_filter
-  ${catkin_LIBRARIES}
+  ${rclcpp_LIBRARIES}
+  ${Boost_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )
-add_dependencies(mocap_kalman_filter
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
+ament_target_dependencies(mocap_kalman_filter
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  tf2
+  tf2_ros
+  tf2_eigen
 )
 
 add_library(mocap_base_driver
   src/MoCapDriverBase.cpp
 )
 target_link_libraries(mocap_base_driver
-  ${catkin_LIBRARIES}
   mocap_kalman_filter
 )
-add_dependencies(mocap_base_driver
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
+ament_target_dependencies(mocap_base_driver
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  tf2
+  tf2_ros
+  tf2_eigen
 )
 
+#############
+## Install ##
+#############
 install(TARGETS mocap_base_driver mocap_kalman_filter
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+  INCLUDES DESTINATION include
 )
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-)
+
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+ament_export_dependencies(rclcpp geometry_msgs nav_msgs)
+
+ament_package()

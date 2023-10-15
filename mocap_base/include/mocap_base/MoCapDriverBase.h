@@ -25,12 +25,12 @@
 #include <boost/shared_ptr.hpp>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
-#include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <mocap_base/KalmanFilter.h>
 
 namespace mocap{
-
 /*
  * @brief Subject Defines attributes of a rigid body
  */
@@ -47,7 +47,7 @@ class Subject {
     /*
      * @brief Constructor and Destructor
      */
-    Subject(ros::NodeHandle* nptr, const std::string& sub_name,
+    Subject(std::shared_ptr<rclcpp::Node> nptr, const std::string& sub_name,
         const std::string& p_frame);
     ~Subject() {}
 
@@ -117,11 +117,11 @@ class Subject {
     boost::shared_mutex mtx;
 
     // Publisher for the subject
-    ros::NodeHandle* nh_ptr;
+    std::shared_ptr<rclcpp::Node> nh_ptr;
     std::string parent_frame;
-    ros::Publisher pub_filter;
-    ros::Publisher pub_raw;
-    ros::Publisher pub_vel;
+    std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::Odometry>> pub_filter;
+    std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::PoseStamped>> pub_raw;
+    std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::TwistStamped>> pub_vel;
 };
 
 /*
@@ -136,12 +136,14 @@ class MoCapDriverBase{
      * @brief Constructor
      * @param nh Ros node
      */
-    MoCapDriverBase(const ros::NodeHandle& n):
-      nh             (n),
+    MoCapDriverBase(const std::shared_ptr<rclcpp::Node>& nh_ptr):
+      nh             (nh_ptr),
       frame_rate     (100),
       model_list     (std::vector<std::string>(0)),
       publish_tf     (false),
-      fixed_frame_id ("mocap"){
+      fixed_frame_id ("mocap"),
+      tf_publisher   (nh_ptr)
+    {
       return;
     }
 
@@ -193,7 +195,7 @@ class MoCapDriverBase{
     std::string server_address;
 
     // Ros node
-    ros::NodeHandle nh;
+    std::shared_ptr<rclcpp::Node> nh;
 
     // Frame rate of the mocap system
     unsigned int frame_rate;
@@ -208,7 +210,7 @@ class MoCapDriverBase{
     // Publish tf
     bool publish_tf;
     std::string fixed_frame_id;
-    tf::TransformBroadcaster tf_publisher;
+    tf2_ros::TransformBroadcaster tf_publisher;
 
 };
 }
