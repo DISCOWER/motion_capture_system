@@ -1,39 +1,31 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(mocap_qualisys)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+## Compile as C++14, supported in ROS Kinetic and newer
+add_compile_options(-std=c++14)
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -O3 -fPIC")
 
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(catkin REQUIRED COMPONENTS
-  message_generation
-  roscpp
-  geometry_msgs
-  tf
-  eigen_conversions
-  tf_conversions
-  mocap_base
-)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(mocap_base REQUIRED)
 
-
-catkin_package(
-  #INCLUDE_DIRS include
-  #LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS
-    geometry_msgs tf mocap_base
-  DEPENDS
-  Boost EIGEN3
-)
-
+###########
+## Build ##
+###########
+# Specify additional locations of header files
+# Your package locations should be listed before other locations
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
 )
-
-
-if(NOT APPLE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 # QUALISYS
 add_library(mocap_qualisys_driver
@@ -44,36 +36,44 @@ add_library(mocap_qualisys_driver
   include/mocap_qualisys/Network.cpp
 )
 target_link_libraries(mocap_qualisys_driver
-  ${catkin_LIBRARIES}
+  ${rclcpp_LIBRARIES}
+  ${Boost_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )
-add_dependencies(mocap_qualisys_driver
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+ament_target_dependencies(mocap_qualisys_driver
+  rclcpp
+  Boost
+  Eigen3
+  tf2
+  tf2_ros
+  tf2_eigen
+)
 
-  ${catkin_EXPORTED_TARGETS}
-)
+# add_dependencies(mocap_qualisys_driver
+#   ${${PROJECT_NAME}_EXPORTED_TARGETS}
+#   ${catkin_EXPORTED_TARGETS}
+# )
 
 add_executable(mocap_qualisys_node
   src/qualisys.cpp
 )
 target_link_libraries(mocap_qualisys_node
   mocap_qualisys_driver
-  ${catkin_LIBRARIES}
+  ${rclcpp_LIBRARIES}
 )
 
+#############
+## Install ##
+#############
 install(TARGETS mocap_qualisys_driver mocap_qualisys_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+  INCLUDES DESTINATION include
 )
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-)
-install(DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
-else()
-  message(ERROR " MacOS is unsupported! mocap_qualisys will not be built!")
-endif()
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+ament_export_dependencies(rclcpp geometry_msgs nav_msgs tf2 tf2_ros tf2_eigen)
 
-
-
+ament_package()

@@ -24,7 +24,7 @@
 #include <set>
 #include <vector>
 #include <boost/asio.hpp>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <mocap_base/MoCapDriverBase.h>
 #include <mocap_qualisys/RTProtocol.h>
 
@@ -40,8 +40,8 @@ class QualisysDriver: public MoCapDriverBase{
      * @brief Constructor
      * @param nh Ros node
      */
-    QualisysDriver(const ros::NodeHandle& n):
-      MoCapDriverBase   (n),
+    QualisysDriver(const std::shared_ptr<rclcpp::Node>& nh_ptr):
+      MoCapDriverBase   (nh_ptr),
       max_accel         (10.0),
       frame_interval    (0.01),
       last_packet_time  (0),

@@ -20,7 +20,10 @@
 #include <climits>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
-#include <tf_conversions/tf_eigen.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Vector3.h>
+
 #include <mocap_qualisys/QualisysDriver.h>
 
 using namespace std;
@@ -47,7 +50,7 @@ bool QualisysDriver::init() {
   nh.param("qtm_protocol_version", qtm_protocol_version, 18);
 
   if (server_address.empty()){
-    ROS_FATAL("server_address parameter empty");
+    RCLCPP_FATAL(nh->get_logger(), "server_address parameter empty");
     return false;
   }
 
@@ -58,10 +61,10 @@ bool QualisysDriver::init() {
     udp_port_ptr = &udp_stream_port;
   }
   else if (int_udp_port < -1 || int_udp_port > USHRT_MAX){
-    ROS_WARN("Invalid UDP port %i, falling back to TCP", int_udp_port);
+    RCLCPP_WARN(nh->get_logger(), "Invalid UDP port %i, falling back to TCP", int_udp_port);
   }
   // Connecting to the server
-  ROS_INFO_STREAM("Connecting to QTM server at: "
+  RCLCPP_INFO_STREAM(nh->get_logger(), "Connecting to QTM server at: "
       << server_address << ":" << base_port);
   // Major protocol version is always 1, so only the minor version can be set
   const int major_protocol_version = 1;
@@ -71,28 +74,28 @@ bool QualisysDriver::init() {
                              udp_port_ptr, 
                              major_protocol_version, 
                              minor_protocol_version)) {
-    ROS_FATAL_STREAM("Connection to QTM server at: "
+    RCLCPP_FATAL(nh->get_logger(), "Connection to QTM server at: "
         << server_address << ":" << base_port << " failed\n"
         "Reason: " << port_protocol.GetErrorString());
     return false;
   }
-  ROS_INFO_STREAM("Connected to " << server_address << ":" << base_port);
+  RCLCPP_INFO_STREAM(nh->get_logger(), "Connected to " << server_address << ":" << base_port);
   if (udp_stream_port > 0) 
   {
-    ROS_INFO("Streaming data to UDP port %i", udp_stream_port);
+    RCLCPP_INFO(nh->get_logger(), "Streaming data to UDP port " << udp_stream_port);
   }
   // Get 6DOF settings
   bool bDataAvailable = false;
   port_protocol.Read6DOFSettings(bDataAvailable);
   if (bDataAvailable == false) {
-    ROS_FATAL_STREAM("Reading 6DOF body settings failed during intialization\n"
-                  << "QTM error: " << port_protocol.GetErrorString());
+    RCLCPP_FATAL(nh->get_logger(), "Reading 6DOF body settings failed during intialization\n"
+        << "QTM error: " << port_protocol.GetErrorString());
     return false;
   }
   // Read system settings
   if (!port_protocol.ReadCameraSystemSettings()){
-    ROS_FATAL_STREAM("Failed to read system settings during intialization\n"
-                   << "QTM error: " << port_protocol.GetErrorString());
+    RCLCPP_FATAL_STREAM(nh->get_logger(), "Failed to read camera system settings during intialization\n"
+        << "QTM error: " << port_protocol.GetErrorString());
     return false;
   }
   // Start streaming data frames
@@ -105,9 +108,9 @@ bool QualisysDriver::init() {
   }
   else {
     if (frame_rate > system_frequency){
-      ROS_WARN("Requested capture rate %i larger than current system capture rate %i.", 
+      RCLCPP_WARN("Requested capture rate %i larger than current system capture rate %i.", 
                frame_rate, system_frequency);
-            }
+    }
     frame_rate = system_frequency;
   }
   bDataAvailable = port_protocol.StreamFrames(
@@ -116,7 +119,7 @@ bool QualisysDriver::init() {
       udp_stream_port, // nUDPPort
       nullptr, // nUDPAddr
       CRTProtocol::cComponent6d);
-  ROS_INFO("Frame rate: %i frames per second", frame_rate);
+  RCLCPP_INFO(nh->get_logger(), "Streaming frames at " << frame_rate << " Hz");
   // Calculate covariance matrices
   process_noise.topLeftCorner<6, 6>() =
     0.5*Matrix<double, 6, 6>::Identity()*dt*dt*max_accel;
@@ -131,7 +134,7 @@ bool QualisysDriver::init() {
 }
 
 void QualisysDriver::disconnect() {
-  ROS_INFO_STREAM("Disconnected from the QTM server at "
+  RCLCPP_INFO_STREAM(nh->get_logger(), "Disconnecting from the QTM server at "
       << server_address << ":" << base_port);
   port_protocol.StreamFramesStop();
   port_protocol.Disconnect();
@@ -147,14 +150,15 @@ bool QualisysDriver::run() {
     switch(e_type) {
       // Case 1 - sHeader.nType 0 indicates an error
       case CRTPacket::PacketError:
-        ROS_ERROR_STREAM_THROTTLE(
+
+        RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(),
             1, "Error when streaming frames: "
             << port_protocol.GetRTPacket()->GetErrorString());
         break;
 
       // Case 2 - No more data
       case CRTPacket::PacketNoMoreData:
-        ROS_ERROR_STREAM_THROTTLE(1, "No more data, check if RT capture is active");
+        RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(), 1, "No more data, check if RT capture is active");
         break;
 
       // Case 3 - Data received
@@ -168,12 +172,12 @@ bool QualisysDriver::run() {
         break;
 
       default:
-        ROS_WARN_THROTTLE(1, "Unhandled CRTPacket type, case: %i", e_type);
+        RCLCPP_WARN_THROTTLE(nh->get_logger(), 1, "Unhandled CRTPacket type, case: %i", e_type);
         break;
     }
   }
   else { // 
-    ROS_ERROR_STREAM("QTM error when receiving packet:\n" << port_protocol.GetErrorString());
+    RCLCPP_ERROR_STREAM(nh->get_logger(), "QTM error when receiving packet:\n" << port_protocol.GetErrorString());
   }
   return is_ok;
 }
@@ -186,16 +190,15 @@ void QualisysDriver::handleFrame() {
   double current_frame_time = prt_packet->GetTimeStamp() / 1e6;
   if(start_time_local_ == 0)
   {
-    start_time_local_ = ros::Time::now().toSec();
+    start_time_local_ = rclcpp::Time::now().toSec();
     start_time_packet_ = current_frame_time;
     previous_frame_time = current_frame_time;
   }
   else if (previous_frame_time > current_frame_time){
-    ROS_WARN("Dropped old frame from time %fdropped, previous frame was from time %f", 
+    RCLCPP_WARN(nh->get_logger(), "Dropped old frame from time %f, previous frame was from time %f", 
              current_frame_time, previous_frame_time);
   }
   else {
-    //ROS_INFO("Frame time drift: %f seconds", start_time_local_ + (current_frame_time - start_time_packet_) - ros::Time::now().toSec());
     previous_frame_time = current_frame_time;
   }
   for (int i = 0; i< body_count; ++i) {
@@ -264,23 +267,42 @@ void QualisysDriver::handleSubject(int sub_idx) {
 
     Quaterniond att = subjects.at(subject_name)->getAttitude();
     Vector3d pos = subjects.at(subject_name)->getPosition();
-    tf::Quaternion att_tf;
-    tf::Vector3 pos_tf;
-    tf::quaternionEigenToTF(att, att_tf);
-    tf::vectorEigenToTF(pos, pos_tf);
-    ROS_DEBUG("Name: %s,\tindex: %i", subject_name.c_str(), sub_idx);
-    ROS_DEBUG("%s rot matrix:\n%f,\t%f,\t%f\n%f,\t%f,\t%f\n%f,\t%f,\t%f\n",
+    // tf2::Quaternion att_tf;
+    // tf2::Vector3 pos_tf;
+    // quaternionEigenToTF(att, att_tf);
+    // vectorEigenToTF(pos, pos_tf);
+
+    RCLCPP_DEBUG(nh->get_logger(), "Name: %s,\tindex: %i", subject_name.c_str(), sub_idx);
+    RCLCPP_DEBUG(nh->get_logger(), "%s rot matrix:\n%f,\t%f,\t%f\n%f,\t%f,\t%f\n%f,\t%f,\t%f\n",
             subject_name.c_str(),
             rot_array[0], rot_array[1], rot_array[2],
             rot_array[3], rot_array[4], rot_array[5],
             rot_array[6], rot_array[7], rot_array[8]);
-    ROS_DEBUG("Position\nx: %f,\ty: %f\tz: %f", x/1000.0, y/1000.0, z/1000.0);
-    ROS_DEBUG("Quaternion rotation\nx: %f,\ty: %f,\tz: %f,\tw: %f,\t",
-            att_tf.getX(), att_tf.getY(), att_tf.getZ(), att_tf.getW());
-    tf::StampedTransform stamped_transform =
-      tf::StampedTransform(tf::Transform(att_tf, pos_tf),
-        ros::Time(time), fixed_frame_id, subject_name);
+    RCLCPP_DEBUG(nh->get_logger(), "Position\nx: %f,\ty: %f\tz: %f", x/1000.0, y/1000.0, z/1000.0);
+    RCLCPP_DEBUG(nh->get_logger(), "Quaternion rotation\nx: %f,\ty: %f,\tz: %f,\tw: %f,\t",
+            att.x(), att.y(), att.z(), att.w());
+
+
+    geometry_msgs::msg::TransformStamped stamped_transform;
+    stamped_transform.header.stamp = rclcpp::Time(time);
+    stamped_transform.header.frame_id = fixed_frame_id;
+    stamped_transform.child_frame_id = subject_name;
+
+    stamped_transform.transform.translation.x = pos.x();
+    stamped_transform.transform.translation.y = pos.y();
+    stamped_transform.transform.translation.z = pos.z();
+
+    stamped_transform.transform.rotation.x = att.x();
+    stamped_transform.transform.rotation.y = att.y();
+    stamped_transform.transform.rotation.z = att.z();
+    stamped_transform.transform.rotation.w = att.w();
+
     tf_publisher.sendTransform(stamped_transform);
+
+    // tf::StampedTransform stamped_transform =
+    //   tf::StampedTransform(tf::Transform(att_tf, pos_tf),
+    //     rclcpp::Time(time), fixed_frame_id, subject_name);
+    // tf_publisher.sendTransform(stamped_transform);
   }
   return;
 }

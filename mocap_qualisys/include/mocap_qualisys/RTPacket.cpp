@@ -1834,7 +1834,8 @@ float CRTPacket::SetByteOrder(float* pfData)
     if (mbBigEndian)
     {
         nTmp = ntohl(*((unsigned int*)pfData));
-        return *((float*)&nTmp);
+        // return *((float*)&nTmp);
+        return static_cast<float>(nTmp);
     }
     return *pfData;
 } // SetByteOrder
@@ -1846,7 +1847,8 @@ double CRTPacket::SetByteOrder(double* pfData)
     if (mbBigEndian)
     {
         nTmp = (((unsigned long long)(ntohl((long)*((unsigned long long*)pfData))) << 32) + ntohl(*((unsigned long long*)pfData) >> 32));
-        return *((double*)&nTmp);
+        // return *((double*)&nTmp);
+        return static_cast<double>(nTmp);
     }
     return *pfData;
 } // SetByteOrder
