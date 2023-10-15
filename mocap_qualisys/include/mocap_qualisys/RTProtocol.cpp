@@ -645,7 +645,8 @@ bool CRTProtocol::GetCapture(const char* pFileName, bool bC3D)
                     }
                     else
                     {
-                        sprintf(maErrorStr, "No packet received. %s.", maErrorStr);
+                        strcpy(maErrorStr, "No packet received.");
+                        // sprintf(maErrorStr, "No packet received. %s.", maErrorStr);
                     }
                 }
                 else
@@ -3276,7 +3277,7 @@ bool CRTProtocol::Read6DOFSettings(bool &bDataAvailable)
                     return false;
                 }
                 if (s6DOFBodySettings.origin.type != atoi(oXML.GetChildData().c_str()) ||
-                    s6DOFBodySettings.origin.relativeBody != atoi(oXML.GetChildAttrib("Relative_body").c_str()))
+                    s6DOFBodySettings.origin.relativeBody != static_cast<uint32_t>(atoi(oXML.GetChildAttrib("Relative_body").c_str())))
                 {
                     return false;
                 }
