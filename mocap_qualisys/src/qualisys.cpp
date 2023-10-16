@@ -21,7 +21,7 @@
 
 int main(int argc, char *argv[]) {
 
-  rclcpp::init(argc, argv, "qualisys");
+  rclcpp::init(argc, argv);
   auto nh = rclcpp::Node::make_shared("~");
 
   mocap::QualisysDriver driver(nh);

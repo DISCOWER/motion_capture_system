@@ -36,31 +36,39 @@ double QualisysDriver::deg2rad = M_PI / 180.0;
 bool QualisysDriver::init() {
   // The base port (as entered in QTM, TCP/IP port number, in the RT output tab
   // of the workspace options
-  int unsigned_frame_rate;
-  frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
-  int int_udp_port;
-  nh->declare_parameter("server_address", "");
-  nh->declare_parameter("server_base_port", 22222);
-  nh->declare_parameter("model_list", vector<string>(0));
-  nh->declare_parameter("frame_rate", 0);
-  nh->declare_parameter("max_accel", 10.0);
-  nh->declare_parameter("publish_tf", false);
-  nh->declare_parameter("fixed_frame_id", "mocap");
-  nh->declare_parameter("udp_port", -1);
-  nh->declare_parameter("qtm_protocol_version", 18);
-
-  // nh.param("server_address", server_address, string(""));
-  // nh.param("server_base_port", base_port, 22222);
-  // nh.param("model_list", model_list, vector<string>(0));
   // int unsigned_frame_rate;
-  // nh.param("frame_rate", unsigned_frame_rate, 0);
   // frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
-  // nh.param("max_accel", max_accel, 10.0);
-  // nh.param("publish_tf", publish_tf, false);
-  // nh.param("fixed_frame_id", fixed_frame_id, string("mocap"));
-  // int int_udp_port;
-  // nh.param("udp_port", int_udp_port, -1);
-  // nh.param("qtm_protocol_version", qtm_protocol_version, 18);
+  // int int_udp_port = -1;
+  // nh->declare_parameter("server_address", "");
+  // nh->declare_parameter("server_base_port", 22222);
+  // nh->declare_parameter("model_list", vector<string>(0));
+  // nh->declare_parameter("frame_rate", 0);
+  // nh->declare_parameter("max_accel", 10.0);
+  // nh->declare_parameter("publish_tf", false);
+  // nh->declare_parameter("fixed_frame_id", "mocap");
+  // nh->declare_parameter("udp_port", -1);
+  // nh->declare_parameter("qtm_protocol_version", 18);
+
+  std::string server_address;
+  nh->get_parameter_or("server_address", server_address, string(""));
+  int base_port;
+  nh->get_parameter_or("server_base_port", base_port, 22222);
+  vector<string> model_list;
+  nh->get_parameter_or("model_list", model_list, vector<string>(0));
+  int unsigned_frame_rate;
+  nh->get_parameter_or("frame_rate", unsigned_frame_rate, 0);
+  unsigned int frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
+
+  double max_accel;
+  nh->get_parameter_or("max_accel", max_accel, 10.0);
+  bool publish_tf;
+  nh->get_parameter_or("publish_tf", publish_tf, false);
+  string fixed_frame_id;
+  nh->get_parameter_or("fixed_frame_id", fixed_frame_id, string("mocap"));
+  int int_udp_port;
+  nh->get_parameter_or("udp_port", int_udp_port, -1);
+  int qtm_protocol_version;
+  nh->get_parameter_or("qtm_protocol_version", qtm_protocol_version, 18);
 
   if (server_address.empty()){
     RCLCPP_FATAL(nh->get_logger(), "server_address parameter empty");
@@ -152,6 +160,7 @@ void QualisysDriver::disconnect() {
 }
 
 bool QualisysDriver::run() {
+  auto error_clock = rclcpp::Clock();
   prt_packet = port_protocol.GetRTPacket();
   CRTPacket::EPacketType e_type;
   bool is_ok = false;
@@ -161,13 +170,14 @@ bool QualisysDriver::run() {
       // Case 1 - sHeader.nType 0 indicates an error
       case CRTPacket::PacketError:
 
-        RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(),
-            1, "Error when streaming frames : %s", port_protocol.GetRTPacket()->GetErrorString());
+        RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(), error_clock,
+            1, "Error when streaming frames : " << port_protocol.GetRTPacket()->GetErrorString());
         break;
 
       // Case 2 - No more data
       case CRTPacket::PacketNoMoreData:
-        RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(), 1, "No more data, check if RT capture is active");
+        RCLCPP_ERROR_STREAM_THROTTLE(nh->get_logger(), error_clock,
+        1, "No more data, check if RT capture is active");
         break;
 
       // Case 3 - Data received
@@ -181,7 +191,8 @@ bool QualisysDriver::run() {
         break;
 
       default:
-        RCLCPP_WARN_THROTTLE(nh->get_logger(), 1, "Unhandled CRTPacket type, case: %i", e_type);
+        std::string message = "Unhandled CRTPacket type, case: " + std::to_string(static_cast<int>(e_type));
+        RCLCPP_WARN_STREAM_THROTTLE(nh->get_logger(), error_clock, 1, message);
         break;
     }
   }
