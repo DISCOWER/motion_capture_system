@@ -22,7 +22,7 @@
 int main(int argc, char *argv[]) {
 
   rclcpp::init(argc, argv);
-  auto nh = rclcpp::Node::make_shared("~");
+  auto nh = rclcpp::Node::make_shared("mocal_qualisys_node");
 
   mocap::QualisysDriver driver(nh);
   if(!driver.init()) {
