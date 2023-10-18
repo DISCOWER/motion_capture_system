@@ -1,72 +1,80 @@
+import os
+import sys
+
 import launch
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, Node
-from launch.substitutions import LaunchConfiguration
+import launch_ros.actions
+
 
 def generate_launch_description():
-
-    # Declare arguments with their default values
-    declare_server_address_arg = DeclareLaunchArgument(
-        'server_address', default_value='qtm-pc',
-        description='Server address argument')
-
-    declare_server_base_port_arg = DeclareLaunchArgument(
-        'server_base_port', default_value='22222',
-        description='Server base port argument')
-
-    declare_frame_rate_arg = DeclareLaunchArgument(
-        'frame_rate', default_value='0',
-        description='Frame rate argument')
-
-    declare_max_accel_arg = DeclareLaunchArgument(
-        'max_accel', default_value='10.0',
-        description='Max acceleration argument')
-
-    declare_publish_tf_arg = DeclareLaunchArgument(
-        'publish_tf', default_value='true',
-        description='Publish tf argument')
-
-    declare_fixed_frame_id_arg = DeclareLaunchArgument(
-        'fixed_frame_id', default_value='mocap',
-        description='Fixed frame ID argument')
-
-    declare_udp_port_arg = DeclareLaunchArgument(
-        'udp_port', default_value='0',
-        description='UDP port argument. -1 for TCP stream, 0 for random port.')
-
-    declare_qtm_protocol_version_arg = DeclareLaunchArgument(
-        'qtm_protocol_version', default_value='18',
-        description='QTM protocol version argument')
-
-    # Node definition
-    mocap_qualisys_node = Node(
-        package='mocap_qualisys',
-        executable='mocap_qualisys_node',
-        name='qualisys',
-        output='screen',
-        parameters=[
-            {'server_address': LaunchConfiguration('server_address')},
-            {'server_base_port': LaunchConfiguration('server_base_port')},
-            {'frame_rate': LaunchConfiguration('frame_rate')},
-            {'max_accel': LaunchConfiguration('max_accel')},
-            {'publish_tf': LaunchConfiguration('publish_tf')},
-            {'fixed_frame_id': LaunchConfiguration('fixed_frame_id')},
-            {'udp_port': LaunchConfiguration('udp_port')},
-            {'qtm_protocol_version': LaunchConfiguration('qtm_protocol_version')},
-            {'model_list': []}  # This is an empty list for now. Modify as necessary.
-        ],
-        # Uncomment the remap line and modify as necessary
-        # remappings=[('qualisys/F450/odom', '/f450/odom')]
-    )
-
-    return LaunchDescription([
-        declare_server_address_arg,
-        declare_server_base_port_arg,
-        declare_frame_rate_arg,
-        declare_max_accel_arg,
-        declare_publish_tf_arg,
-        declare_fixed_frame_id_arg,
-        declare_udp_port_arg,
-        declare_qtm_protocol_version_arg,
-        mocap_qualisys_node
+    ld = launch.LaunchDescription([
+        launch.actions.DeclareLaunchArgument(
+            name='server_address',
+            default_value='qtm-pc'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='server_base_port',
+            default_value='22222'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='frame_rate',
+            default_value='0'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='max_accel',
+            default_value='10.0'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='publish_tf',
+            default_value='true'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='fixed_frame_id',
+            default_value='mocap'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='udp_port',
+            default_value='0',
+            description='UDP port can be set to -1 to request a TCP stream,     setting 0 requests a random port, any other positive value      requests that specific port'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='qtm_protocol_version',
+            default_value='18'
+        ),
+        launch_ros.actions.Node(
+            package='mocap_qualisys',
+            executable='mocap_qualisys_node',
+            name='qualisys',
+            output='screen',
+            parameters=[
+                {
+                    'server_address': launch.substitutions.LaunchConfiguration('server_address')
+                },
+                {
+                    'server_base_port': launch.substitutions.LaunchConfiguration('server_base_port')
+                },
+                {
+                    'frame_rate': launch.substitutions.LaunchConfiguration('frame_rate')
+                },
+                {
+                    'max_accel': launch.substitutions.LaunchConfiguration('max_accel')
+                },
+                {
+                    'publish_tf': launch.substitutions.LaunchConfiguration('publish_tf')
+                },
+                {
+                    'fixed_frame_id': launch.substitutions.LaunchConfiguration('fixed_frame_id')
+                },
+                {
+                    'udp_port': launch.substitutions.LaunchConfiguration('udp_port')
+                },
+                {
+                    'qtm_protocol_version': launch.substitutions.LaunchConfiguration('qtm_protocol_version')
+                }
+            ]
+        )
     ])
+    return ld
+
+
+if __name__ == '__main__':
+    generate_launch_description()

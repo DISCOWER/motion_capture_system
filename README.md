@@ -1,10 +1,10 @@
-# ROS2 Driver for Motion Capture Systems
+# ROS2 Driver for DISCOWER's Motion Capture Systems
 ![QUALISYS Logo](https://cdn-content.qualisys.com/2021/01/qualisys-logo-530x.png)
 
 
 ## Overview
-This package contains ROS2 drivers for two different motion capture systems,**VICON** And **QUALISYS**.
-**NOTE:** This fork focuses on the Qualisys ROS2 driver. Some alterations have been made to the Vicon package to ensure compatability with the mutual interface.
+This package contains ROS2 drivers for the **QUALISYS** motion capture systems.
+**NOTE:** This fork ONLY focuses on the Qualisys ROS2 driver.
 
 **Keywords:** ROS2, motion capture, Qualisys
 
@@ -14,11 +14,11 @@ For the QUALISYS driver, we use the [Qualisys CPP SDK](https://github.com/qualis
 The rest of the source code is released under the [Apache 2.0 license](LICENSE), wherever not specified.
 
 ## Compiling
-This is a catkin package. Make sure the package is on `ROS_PACKAGE_PATH` after cloning the package to your workspace. Drivers for different motion capture system can be independently compiled.
+This is a colcon package. Make sure the package is on `ROS_PACKAGE_PATH` after cloning the package to your workspace.
 
 ```
 cd your_work_space
-catkin_make
+colcon build
 ```
 
 This will compile the drivers for `{sys}`
@@ -27,13 +27,13 @@ This will compile the drivers for `{sys}`
 
 Run a qualisys node
 
-	roslaunch mocap_qualisys qualisys.launch  server_address:=*QTM server address*
+	ros2 launch mocap_qualisys qualisys.launch.py  server_address:=*QTM server address*
 
 Replace `*QTM server address*` with the IP address to your QTM server.
 
 ## Launch files
 
-* **qualisys.launch:** Launch a qualisys interface node
+* **qualisys.launch.py:** Launch a qualisys interface node
 
      - **`server_address`** IP address of the server of the motion capture system to be connected. Default: `qtm-pc.local`.
 
