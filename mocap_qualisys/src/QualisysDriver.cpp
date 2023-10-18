@@ -36,18 +36,16 @@ double QualisysDriver::deg2rad = M_PI / 180.0;
 bool QualisysDriver::init() {
   // The base port (as entered in QTM, TCP/IP port number, in the RT output tab
   // of the workspace options
-  // int unsigned_frame_rate;
-  // frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
-  // int int_udp_port = -1;
-  // nh->declare_parameter("server_address", "");
-  // nh->declare_parameter("server_base_port", 22222);
-  // nh->declare_parameter("model_list", vector<string>(0));
-  // nh->declare_parameter("frame_rate", 0);
-  // nh->declare_parameter("max_accel", 10.0);
-  // nh->declare_parameter("publish_tf", false);
-  // nh->declare_parameter("fixed_frame_id", "mocap");
-  // nh->declare_parameter("udp_port", -1);
-  // nh->declare_parameter("qtm_protocol_version", 18);
+  nh->declare_parameter("server_address", "");
+  nh->declare_parameter("server_base_port", 22222);
+  nh->declare_parameter("model_list", vector<string>(0));
+  nh->declare_parameter("frame_rate", 0);
+  nh->declare_parameter("max_accel", 10.0);
+  nh->declare_parameter("publish_tf", false);
+  nh->declare_parameter("fixed_frame_id", "mocap");
+  nh->declare_parameter("udp_port", -1);
+  nh->declare_parameter("qtm_protocol_version", 18);
+
 
   std::string server_address;
   nh->get_parameter_or("server_address", server_address, string(""));
@@ -63,7 +61,7 @@ bool QualisysDriver::init() {
   nh->get_parameter_or("max_accel", max_accel, 10.0);
   bool publish_tf;
   nh->get_parameter_or("publish_tf", publish_tf, false);
-  string fixed_frame_id;
+  std::string fixed_frame_id;
   nh->get_parameter_or("fixed_frame_id", fixed_frame_id, string("mocap"));
   int int_udp_port;
   nh->get_parameter_or("udp_port", int_udp_port, -1);
@@ -71,7 +69,7 @@ bool QualisysDriver::init() {
   nh->get_parameter_or("qtm_protocol_version", qtm_protocol_version, 18);
 
   if (server_address.empty()){
-    RCLCPP_FATAL(nh->get_logger(), "server_address parameter empty");
+    RCLCPP_FATAL(nh->get_logger(), "Server_address parameter empty");
     return false;
   }
 

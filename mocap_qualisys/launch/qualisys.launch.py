@@ -9,7 +9,7 @@ def generate_launch_description():
     ld = launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument(
             name='server_address',
-            default_value='qtm-pc'
+            default_value='10.0.0.10'
         ),
         launch.actions.DeclareLaunchArgument(
             name='server_base_port',
