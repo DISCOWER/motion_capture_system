@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.5)
 project(mocap_base)
 
-## Compile as C++14, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14)
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -O3 -fPIC")
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -O3 -fPIC" )
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS thread)
 find_package(Eigen3 REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -33,7 +35,6 @@ add_library(mocap_kalman_filter SHARED
 target_link_libraries(mocap_kalman_filter
   ${rclcpp_LIBRARIES}
   ${Boost_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
 )
 ament_target_dependencies(mocap_kalman_filter
   rclcpp
@@ -51,7 +52,6 @@ target_link_libraries(mocap_base_driver
   mocap_kalman_filter
   ${rclcpp_LIBRARIES}
   ${Boost_LIBRARIES}
-  ${EIGEN3_LIBRARIES}
 )
 ament_target_dependencies(mocap_base_driver
   rclcpp
