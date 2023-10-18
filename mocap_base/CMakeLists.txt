@@ -27,10 +27,9 @@ include_directories(
 )
 
 # Declare C++ libraries
-add_library(mocap_kalman_filter
+add_library(mocap_kalman_filter SHARED
   src/KalmanFilter.cpp
 )
-
 target_link_libraries(mocap_kalman_filter
   ${rclcpp_LIBRARIES}
   ${Boost_LIBRARIES}
@@ -45,11 +44,14 @@ ament_target_dependencies(mocap_kalman_filter
   tf2_eigen
 )
 
-add_library(mocap_base_driver
+add_library(mocap_base_driver SHARED
   src/MoCapDriverBase.cpp
 )
 target_link_libraries(mocap_base_driver
   mocap_kalman_filter
+  ${rclcpp_LIBRARIES}
+  ${Boost_LIBRARIES}
+  ${EIGEN3_LIBRARIES}
 )
 ament_target_dependencies(mocap_base_driver
   rclcpp
@@ -78,8 +80,8 @@ install(DIRECTORY include/${PROJECT_NAME}
 )
 
 ament_export_include_directories(include)
-# ament_export_targets(${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_libraries(${PROJECT_NAME})
+# ament_export_libraries(${PROJECT_NAME})
+ament_export_libraries(mocap_base_driver mocap_kalman_filter)
 ament_export_dependencies(rclcpp geometry_msgs nav_msgs tf2 tf2_ros tf2_eigen)
 
 ament_package()

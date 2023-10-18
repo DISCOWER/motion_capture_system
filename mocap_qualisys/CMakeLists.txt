@@ -37,11 +37,13 @@ add_library(mocap_qualisys_driver
   include/mocap_qualisys/Network.cpp
 )
 target_link_libraries(mocap_qualisys_driver
+  ${mocap_base_LIBRARIES}
   ${rclcpp_LIBRARIES}
   ${Boost_LIBRARIES}
   ${EIGEN3_LIBRARIES}
 )
 ament_target_dependencies(mocap_qualisys_driver
+  mocap_base
   rclcpp
   Boost
   Eigen3
