@@ -107,7 +107,7 @@ void Subject::processNewMeasurement(
 
   // Publish raw data from mocap system
   geometry_msgs::msg::PoseStamped pose_raw;
-  pose_raw.header.stamp = rclcpp::Time(time);
+  pose_raw.header.stamp = rclcpp::Clock().now();
   pose_raw.header.frame_id = parent_frame;
 
   quaternionEigenToMsg(m_attitude, pose_raw.pose.orientation);
@@ -131,7 +131,7 @@ void Subject::processNewMeasurement(
   kFilter.update(m_attitude, m_position);
   // Publish the new state
   nav_msgs::msg::Odometry odom_filter;
-  odom_filter.header.stamp = rclcpp::Time(time);
+  odom_filter.header.stamp = rclcpp::Clock().now();
   odom_filter.header.frame_id = parent_frame;
   odom_filter.child_frame_id = name + "/base_link";
   quaternionEigenToMsg(kFilter.attitude, odom_filter.pose.pose.orientation);
@@ -160,7 +160,7 @@ void Subject::processNewMeasurement(
 
   // Publish velocity in parent frame
   geometry_msgs::msg::TwistStamped vel;
-  vel.header.stamp = rclcpp::Time(time);
+  vel.header.stamp = rclcpp::Clock().now();
   vel.header.frame_id = parent_frame;
 
   vectorEigenToMsg(kFilter.angular_vel, vel.twist.angular);
