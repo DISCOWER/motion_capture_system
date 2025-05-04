@@ -46,26 +46,18 @@ bool QualisysDriver::init() {
   nh->declare_parameter("udp_port", -1);
   nh->declare_parameter("qtm_protocol_version", 18);
 
-
-  std::string server_address;
   nh->get_parameter_or("server_address", server_address, string(""));
-  int base_port;
   nh->get_parameter_or("server_base_port", base_port, 22222);
-  vector<string> model_list;
   nh->get_parameter_or("model_list", model_list, vector<string>(0));
   int unsigned_frame_rate;
   nh->get_parameter_or("frame_rate", unsigned_frame_rate, 0);
-  unsigned int frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
+  frame_rate = unsigned_frame_rate > 0 ? unsigned_frame_rate : 0;
 
-  double max_accel;
   nh->get_parameter_or("max_accel", max_accel, 10.0);
-  bool publish_tf;
   nh->get_parameter_or("publish_tf", publish_tf, false);
-  std::string fixed_frame_id;
   nh->get_parameter_or("fixed_frame_id", fixed_frame_id, string("mocap"));
   int int_udp_port;
   nh->get_parameter_or("udp_port", int_udp_port, -1);
-  int qtm_protocol_version;
   nh->get_parameter_or("qtm_protocol_version", qtm_protocol_version, 18);
 
   if (server_address.empty()){
@@ -201,6 +193,7 @@ bool QualisysDriver::run() {
 }
 
 void QualisysDriver::handleFrame() {
+
   // Number of rigid bodies
   int body_count = prt_packet->Get6DOFBodyCount();
   // Compute the timestamp
@@ -240,6 +233,7 @@ void QualisysDriver::handleFrame() {
 }
 
 void QualisysDriver::handleSubject(int sub_idx) {
+
   // Name of the subject
   string subject_name(port_protocol.Get6DOFBodyName(sub_idx));
   // Pose of the subject
@@ -284,7 +278,6 @@ void QualisysDriver::handleSubject(int sub_idx) {
   // Publish tf if requred
   if (publish_tf &&
       subjects.at(subject_name)->getStatus() == Subject::TRACKED) {
-
     Quaterniond att = subjects.at(subject_name)->getAttitude();
     Vector3d pos = subjects.at(subject_name)->getPosition();
     // tf2::Quaternion att_tf;
