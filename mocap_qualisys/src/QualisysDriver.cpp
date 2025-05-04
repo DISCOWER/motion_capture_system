@@ -299,7 +299,7 @@ void QualisysDriver::handleSubject(int sub_idx) {
     geometry_msgs::msg::TransformStamped stamped_transform;
     stamped_transform.header.stamp = rclcpp::Time(time);
     stamped_transform.header.frame_id = fixed_frame_id;
-    stamped_transform.child_frame_id = subject_name;
+    stamped_transform.child_frame_id = subject_name + "/" + "base_link";
 
     stamped_transform.transform.translation.x = pos.x();
     stamped_transform.transform.translation.y = pos.y();
