@@ -121,8 +121,9 @@ void Subject::processNewMeasurement(
     return;
   }
 
-  // Transform matrix from parent to child frame
-  Isometry3d tf_parent2child = Isometry3d(Translation3d(m_position) * m_attitude);
+  // Transform matrix from child to parent
+  // m_attitude is conversion from body 2 inertia, so this is actually
+  Isometry3d tf_child2parent = Isometry3d(Translation3d(m_position) * m_attitude);
 
   status = TRACKED;
   // Perfrom the kalman filter
@@ -137,8 +138,10 @@ void Subject::processNewMeasurement(
   quaternionEigenToMsg(kFilter.attitude, odom_filter.pose.pose.orientation);
   pointEigenToMsg(kFilter.position, odom_filter.pose.pose.position);
   // Transform twist to child frame
-  vectorEigenToMsg(tf_parent2child.linear() * kFilter.angular_vel, odom_filter.twist.twist.angular);
-  vectorEigenToMsg(tf_parent2child.linear() * kFilter.linear_vel, odom_filter.twist.twist.linear);
+  vectorEigenToMsg(kFilter.angular_vel, odom_filter.twist.twist.angular);
+  // Transpose of rotation matrix to convert inertia velocities to body velocities
+  vectorEigenToMsg(tf_child2parent.linear().transpose() * kFilter.linear_vel, odom_filter.twist.twist.linear);
+
   // To be compatible with the covariance in ROS, we have to do some shifting
   Map<Matrix<double, 6, 6, RowMajor> > pose_cov(odom_filter.pose.covariance.begin());
   Map<Matrix<double, 6, 6, RowMajor> > vel_cov(odom_filter.twist.covariance.begin());
@@ -152,7 +155,7 @@ void Subject::processNewMeasurement(
   vel_cov.bottomRightCorner<3, 3>() = kFilter.state_cov.block<3, 3>(6, 6);
   // Transform the velocity cov to child frame
   Matrix<double, 6, 6, RowMajor> r_vel = Matrix<double, 6, 6, RowMajor>::Zero();	//Zero initialized velocity cov matrix
-  r_vel.block<3, 3>(0, 0) = r_vel.block<3, 3>(3, 3) = tf_parent2child.linear();
+  r_vel.block<3, 3>(0, 0) = r_vel.block<3, 3>(3, 3) = tf_child2parent.linear();
   vel_cov = r_vel * vel_cov * r_vel.transpose();
 
   pub_filter->publish(odom_filter);

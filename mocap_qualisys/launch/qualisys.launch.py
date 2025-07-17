@@ -4,8 +4,48 @@ import sys
 import launch
 import launch_ros.actions
 
+from launch.substitutions import PathJoinSubstitution
+from launch.actions import IncludeLaunchDescription
+from launch_ros.substitutions import FindPackageShare
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
+
 
 def generate_launch_description():
+    wara_ps_arg = launch.actions.DeclareLaunchArgument(
+        "wara_ps",
+        default_value="false",
+        description="Set connection to WARA-PS",
+    )
+
+    auto_bag_arg = launch.actions.DeclareLaunchArgument(
+        "auto_bag",
+        default_value="false",
+        description="Set to true to automatically start the autobag service",
+    )
+
+    waraps_bridge = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("wara_ps"), "launch", "lab_integration.launch.py"]
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration("wara_ps")),
+    )
+
+    auto_bag = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("auto_bag"), "launch", "auto_bag_launch.py"]
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration("auto_bag")),
+        launch_arguments={
+            'base_dir': '/home/discower/server/bags',
+        }.items(),
+    )
+
     ld = launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument(
             name='server_address',
@@ -71,7 +111,11 @@ def generate_launch_description():
                     'qtm_protocol_version': launch.substitutions.LaunchConfiguration('qtm_protocol_version')
                 }
             ]
-        )
+        ),
+        wara_ps_arg,
+        waraps_bridge,
+        auto_bag_arg,
+        auto_bag,
     ])
     return ld
 
