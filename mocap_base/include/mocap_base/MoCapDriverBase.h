@@ -27,7 +27,11 @@
 #include <Eigen/Geometry>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_broadcaster.h>
+#ifdef ROS2_JAZZY
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 #include <mocap_base/KalmanFilter.h>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>

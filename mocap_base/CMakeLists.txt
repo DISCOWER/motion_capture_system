@@ -17,6 +17,11 @@ find_package(tf2_eigen REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 
+if($ENV{ROS_DISTRO} STREQUAL "jazzy")
+  add_definitions(-DROS2_JAZZY)
+  message(STATUS "Building for ROS 2 Jazzy")
+endif()
+
 ###########
 ## Build ##
 ###########
@@ -26,6 +31,7 @@ include_directories(
   include
   ${rclcpp_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${tf2_eigen_INCLUDE_DIRS}
 )
 
 # Declare C++ libraries
