@@ -20,7 +20,11 @@
 #include <climits>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#ifdef ROS2_JAZZY
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Vector3.h>
 

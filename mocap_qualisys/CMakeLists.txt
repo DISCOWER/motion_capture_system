@@ -19,6 +19,11 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(mocap_base REQUIRED)
 
+if($ENV{ROS_DISTRO} STREQUAL "jazzy")
+  add_definitions(-DROS2_JAZZY)
+  message(STATUS "Building for ROS 2 Jazzy")
+endif()
+
 ###########
 ## Build ##
 ###########
